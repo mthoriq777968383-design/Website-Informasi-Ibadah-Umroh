@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panduan Ibadah Umroh - Informasi & Peta Interaktif</title>
+    
+    <!-- Tailwind CSS untuk Desain Modern & Responsif -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Plus Jakarta Sans & Amiri (untuk teks Arab) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet CSS & JS untuk Peta Lokasi Interaktif Makkah -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <!-- Konfigurasi Warna Tema Biru Cerah -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        arabic: ['"Amiri"', 'serif'],
+                    },
+                    colors: {
+                        skybrand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Pola geometris islami halus untuk latar hero */
+        .islamic-pattern {
+            background-color: #0284c7;
+            background-image: radial-gradient(#38bdf8 1px, transparent 1px), radial-gradient(#7dd3fc 1px, #0284c7 1px);
+            background-size: 40px 40px;
+            background-position: 0 0, 20px 20px;
+        }
+        /* Pastikan kontainer peta memiliki z-index yang aman di bawah navbar */
+        #umroh-map {
+            z-index: 10;
+        }
+    </style>
+</head>
+<body class="bg-skybrand-50 text-slate-800 font-sans antialiased selection:bg-skybrand-200 selection:text-skybrand-900">
+
+    <!-- ==================== HEADER & NAVIGASI ==================== -->
+    <header class="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-skybrand-100 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16 md:h-20">
+                
+                <!-- Logo & Judul Website -->
+                <a href="#home" class="flex items-center gap-3 group">
+                    <div class="w-10 h-10 md:w-11 md:h-11 rounded-xl bg-gradient-to-br from-skybrand-400 to-skybrand-600 flex items-center justify-center text-white shadow-md shadow-skybrand-200 group-hover:scale-105 transition-transform">
+                        <!-- Ikon Ka'bah / Kubah SVG -->
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 2L3 7v13h18V7l-9-5z"/>
+                            <path d="M3 11h18"/>
+                            <path d="M9 20v-5a3 3 0 0 1 6 0v5"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <span class="block text-lg md:text-xl font-extrabold text-skybrand-800 tracking-tight leading-none">Panduan Umroh</span>
+                        <span class="text-xs font-medium text-skybrand-500">Edukasi & Peta Ibadah</span>
+                    </div>
+                </a>
+
+                <!-- Menu Navigasi Desktop (3 Menu Utama: Home, History, About) -->
+                <nav class="hidden md:flex items-center space-x-2" aria-label="Navigasi Utama">
+                    <a href="#home" data-nav="home" class="nav-link px-5 py-2.5 rounded-full text-sm font-bold bg-skybrand-500 text-white shadow-sm transition-all">
+                        Home
+                    </a>
+                    <a href="#history" data-nav="history" class="nav-link px-5 py-2.5 rounded-full text-sm font-semibold text-slate-600 hover:bg-skybrand-100 hover:text-skybrand-700 transition-all">
+                        History
+                    </a>
+                    <a href="#about" data-nav="about" class="nav-link px-5 py-2.5 rounded-full text-sm font-semibold text-slate-600 hover:bg-skybrand-100 hover:text-skybrand-700 transition-all">
+                        About
+                    </a>
+                </nav>
+
+                <!-- Tombol Hamburger Mobile -->
+                <button id="mobile-menu-btn" type="button" class="md:hidden inline-flex items-center justify-center p-2.5 rounded-xl text-skybrand-700 bg-skybrand-50 hover:bg-skybrand-100 focus:outline-none focus:ring-2 focus:ring-skybrand-400" aria-controls="mobile-menu" aria-expanded="false">
+                    <span class="sr-only">Buka menu utama</span>
+                    <svg id="icon-open" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                    <svg id="icon-close" class="hidden h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Dropdown Menu Mobile -->
+        <div id="mobile-menu" class="hidden md:hidden bg-white border-t border-skybrand-100 px-4 pt-3 pb-4 space-y-2 shadow-lg">
+            <a href="#home" data-nav="home" class="mobile-nav-link block px-4 py-3 rounded-xl text-base font-bold bg-skybrand-500 text-white">
+                Home — Pengenalan Umroh
+            </a>
+            <a href="#history" data-nav="history" class="mobile-nav-link block px-4 py-3 rounded-xl text-base font-semibold text-slate-700 hover:bg-skybrand-50">
+                History — Sejarah Umroh
+            </a>
+            <a href="#about" data-nav="about" class="mobile-nav-link block px-4 py-3 rounded-xl text-base font-semibold text-slate-700 hover:bg-skybrand-50">
+                About — Tata Cara & Lokasi Peta
+            </a>
+        </div>
+    </header>
+
+    <!-- ==================== BAGIAN 1: HOME ==================== -->
+    <section id="home" class="scroll-mt-20">
+        <!-- Hero Banner -->
+        <div class="relative overflow-hidden bg-gradient-to-br from-skybrand-600 via-skybrand-500 to-skybrand-400 text-white">
+            <div class="absolute inset-0 opacity-15 islamic-pattern"></div>
+            <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+                    <div class="lg:col-span-7 space-y-6 text-center lg:text-left">
+                        <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/20 backdrop-blur-sm text-sky-50 text-xs sm:text-sm font-semibold border border-white/30">
+                            <span>✨ Media Pembelajaran Interaktif</span>
+                        </div>
+                        <h1 class="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight leading-tight">
+                            Mengenal Lebih Dekat <span class="text-amber-300">Ibadah Umroh</span> di Tanah Suci
+                        </h1>
+                        <p class="text-base sm:text-lg text-sky-50 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
+                            Pelajari pengertian, sejarah perjalanan syariat Islam, urutan tata cara pelaksanaan manasik, hingga eksplorasi peta lokasi suci di Kota Makkah secara mudah dan interaktif.
+                        </p>
+                        <div class="flex flex-wrap justify-center lg:justify-start gap-3 pt-2">
+                            <a href="#apa-itu-umroh" class="px-6 py-3.5 rounded-xl bg-white text-skybrand-700 font-bold shadow-lg hover:bg-sky-50 transition transform hover:-translate-y-0.5">
+                                Mulai Belajar
+                            </a>
+                            <a href="#peta-lokasi" class="px-6 py-3.5 rounded-xl bg-skybrand-700/60 hover:bg-skybrand-700 text-white font-semibold border border-white/30 backdrop-blur-sm transition">
+                                📍 Lihat Peta Makkah
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Ilustrasi Visual Kartu Masjidil Haram -->
+                    <div class="lg:col-span-5">
+                        <div class="bg-white/15 backdrop-blur-md p-4 sm:p-6 rounded-3xl border border-white/30 shadow-2xl">
+                            <div class="relative rounded-2xl overflow-hidden bg-skybrand-800 aspect-[4/3] flex flex-col items-center justify-center p-6 text-center">
+                                <!-- Ilustrasi SVG Ka'bah & Langit Cerah -->
+                                <svg viewBox="0 0 320 220" class="w-full h-full max-h-56 drop-shadow-lg" xmlns="http://www.w3.org/2000/svg">
+                                    <!-- Latar Langit & Bulan Sabit -->
+                                    <rect width="320" height="220" rx="16" fill="#0369a1"/>
+                                    <circle cx="265" cy="45" r="18" fill="#fde047" opacity="0.9"/>
+                                    <circle cx="273" cy="40" r="15" fill="#0369a1"/>
+                                    <!-- Siluet Menara Masjid -->
+                                    <rect x="35" y="65" width="14" height="115" rx="3" fill="#38bdf8" opacity="0.5"/>
+                                    <polygon points="42,40 32,65 52,65" fill="#7dd3fc" opacity="0.7"/>
+                                    <rect x="270" y="75" width="14" height="105" rx="3" fill="#38bdf8" opacity="0.5"/>
+                                    <polygon points="277,50 267,75 287,75" fill="#7dd3fc" opacity="0.7"/>
+                                    <!-- Pelataran Tawaf -->
+                                    <ellipse cx="160" cy="182" rx="125" ry="22" fill="#e0f2fe"/>
+                                    <ellipse cx="160" cy="182" rx="95" ry="15" fill="#bae6fd"/>
+                                    <!-- Bangunan Ka'bah -->
+                                    <rect x="115" y="85" width="90" height="92" rx="4" fill="#1e293b"/>
+                                    <!-- Kiswah Emas -->
+                                    <rect x="115" y="102" width="90" height="10" fill="#f59e0b"/>
+                                    <rect x="132" y="104" width="12" height="6" rx="1" fill="#fef3c7"/>
+                                    <rect x="154" y="104" width="12" height="6" rx="1" fill="#fef3c7"/>
+                                    <rect x="176" y="104" width="12" height="6" rx="1" fill="#fef3c7"/>
+                                    <!-- Pintu Ka'bah -->
+                                    <rect x="168" y="128" width="16" height="28" rx="2" fill="#f59e0b"/>
+                                </svg>
+                                <p class="mt-3 text-xs sm:text-sm font-medium text-sky-100">
+                                    "Labbaik Allahumma Labbaik" — Aku memenuhi panggilan-Mu ya Allah.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sub-bagian: Apa Itu Umroh -->
+        <div id="apa-itu-umroh" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+            <div class="text-center max-w-3xl mx-auto mb-12">
+                <span class="text-xs font-bold uppercase tracking-wider text-skybrand-600 bg-skybrand-100 px-3 py-1 rounded-full">Pengenalan Dasar</span>
+                <h2 class="mt-3 text-2xl sm:text-3xl font-extrabold text-slate-900">Apa Itu Ibadah Umroh?</h2>
+                <p class="mt-3 text-slate-600 leading-relaxed">
+                    Memahami makna, tujuan, dan perbedaan mendasar antara ibadah umroh dengan ibadah haji.
+                </p>
+            </div>
+
+            <!-- Kartu Pengertian & Tujuan -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                <div class="bg-white p-6 rounded-2xl border border-skybrand-100 shadow-sm hover:shadow-md transition">
+                    <div class="w-12 h-12 rounded-xl bg-skybrand-100 text-skybrand-600 flex items-center justify-center text-2xl mb-4">📖</div>
+                    <h3 class="text-lg font-bold text-slate-900 mb-2">Pengertian Bahasa & Istilah</h3>
+                    <p class="text-sm text-slate-600 leading-relaxed">
+                        Secara bahasa, <strong>Umroh</strong> berarti <em>berkunjung</em> atau berziarah. Secara istilah syariat Islam, umroh adalah mengunjungi Baitullah (Ka'bah) di Masjidil Haram untuk melaksanakan rangkaian ibadah tertentu (ihram, tawaf, sa'i, dan tahallul) dengan syarat dan rukun yang telah ditetapkan.
+                    </p>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl border border-skybrand-100 shadow-sm hover:shadow-md transition">
+                    <div class="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center text-2xl mb-4">🤲</div>
+                    <h3 class="text-lg font-bold text-slate-900 mb-2">Tujuan Pelaksanaan</h3>
+                    <p class="text-sm text-slate-600 leading-relaxed">
+                        Umroh bertujuan mendekatkan diri kepada Allah SWT, menyucikan jiwa, memohon ampunan atas dosa-dosa yang telah lalu, serta meneladani ketakwaan Nabi Ibrahim AS dan Nabi Muhammad SAW. Ibadah ini sering disebut juga sebagai <strong>Haji Kecil</strong>.
+                    </p>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl border border-skybrand-100 shadow-sm hover:shadow-md transition">
+                    <div class="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-2xl mb-4">🗓️</div>
+                    <h3 class="text-lg font-bold text-slate-900 mb-2">Fleksibilitas Waktu</h3>
+                    <p class="text-sm text-slate-600 leading-relaxed">
+                        Berbeda dengan ibadah haji yang hanya dilaksanakan pada bulan Dzulhijjah, ibadah umroh dapat dilaksanakan <strong>kapan saja sepanjang tahun</strong> (kecuali hari-hari tertentu seperti hari Arafah dan hari Tasyrik bagi jemaah haji).
+                    </p>
+                </div>
+            </div>
+
+            <!-- Tabel Perbandingan Umroh vs Haji -->
+            <div class="bg-white rounded-2xl border border-skybrand-200 shadow-sm overflow-hidden">
+                <div class="bg-skybrand-600 px-6 py-4 text-white">
+                    <h3 class="text-lg font-bold">Perbedaan Utama Ibadah Umroh & Ibadah Haji</h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-skybrand-50 text-skybrand-900 text-sm border-b border-skybrand-100">
+                                <th class="py-3.5 px-6 font-bold">Aspek Pembeda</th>
+                                <th class="py-3.5 px-6 font-bold">Ibadah Umroh</th>
+                                <th class="py-3.5 px-6 font-bold">Ibadah Haji</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 text-sm text-slate-700">
+                            <tr class="hover:bg-skybrand-50/50">
+                                <td class="py-3.5 px-6 font-semibold text-slate-900">Hukum Pelaksanaan</td>
+                                <td class="py-3.5 px-6">Sunah Muakkad (sebagian ulama mewajibkan sekali seumur hidup bagi yang mampu).</td>
+                                <td class="py-3.5 px-6">Wajib sekali seumur hidup bagi muslim yang mampu (Rukun Islam ke-5).</td>
+                            </tr>
+                            <tr class="hover:bg-skybrand-50/50">
+                                <td class="py-3.5 px-6 font-semibold text-slate-900">Waktu Pelaksanaan</td>
+                                <td class="py-3.5 px-6">Dapat dilakukan kapan saja sepanjang tahun.</td>
+                                <td class="py-3.5 px-6">Waktu khusus pada bulan Dzulhijjah (puncaknya 8–13 Dzulhijjah).</td>
+                            </tr>
+                            <tr class="hover:bg-skybrand-50/50">
+                                <td class="py-3.5 px-6 font-semibold text-slate-900">Rukun Ibadah</td>
+                                <td class="py-3.5 px-6">Ihram (Niat), Tawaf, Sa'i, Tahallul, dan Tertib.</td>
+                                <td class="py-3.5 px-6">Sama seperti umroh, <strong>ditambah Wukuf di Padang Arafah</strong>, Mabit di Muzdalifah & Mina, serta Lempar Jumrah.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== BAGIAN 2: HISTORY ==================== -->
+    <section id="history" class="scroll-mt-20 bg-white border-y border-skybrand-100 py-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-12">
+                <span class="text-xs font-bold uppercase tracking-wider text-skybrand-600 bg-skybrand-100 px-3 py-1 rounded-full">Jejak Sejarah Islam</span>
+                <h2 class="mt-3 text-2xl sm:text-3xl font-extrabold text-slate-900">Sejarah Ibadah Umroh</h2>
+                <p class="mt-3 text-slate-600 leading-relaxed">
+                    Perjalanan sejarah syariat umroh dari pembangunan Ka'bah oleh Nabi Ibrahim AS hingga keteladanan Rasulullah SAW.
+                </p>
+            </div>
+
+            <!-- Timeline Sejarah -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- Era 1 -->
+                <div class="relative bg-skybrand-50/70 p-6 rounded-2xl border border-skybrand-200 flex flex-col justify-between">
+                    <div>
+                        <span class="inline-block px-3 py-1 rounded-lg bg-skybrand-600 text-white text-xs font-bold mb-3">1. Awal Pembangunan Ka'bah</span>
+                        <h3 class="text-lg font-bold text-slate-900 mb-2">Nabi Ibrahim AS & Ismail AS</h3>
+                        <p class="text-sm text-slate-600 leading-relaxed">
+                            Atas perintah Allah SWT, Nabi Ibrahim AS bersama putranya Nabi Ismail AS meninggikan fondasi Baitullah (Ka'bah) di Makkah. Peristiwa Siti Hajar mencari air antara Bukit Safa dan Marwah menjadi asal mula ibadah Sa'i.
+                        </p>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-skybrand-200/70 text-xs font-semibold text-skybrand-700">
+                        Fondasi Tauhid & Manasik
+                    </div>
+                </div>
+
+                <!-- Era 2 -->
+                <div class="relative bg-skybrand-50/70 p-6 rounded-2xl border border-skybrand-200 flex flex-col justify-between">
+                    <div>
+                        <span class="inline-block px-3 py-1 rounded-lg bg-skybrand-600 text-white text-xs font-bold mb-3">2. Tahun 6 Hijriah</span>
+                        <h3 class="text-lg font-bold text-slate-900 mb-2">Perjanjian Hudaibiyah</h3>
+                        <p class="text-sm text-slate-600 leading-relaxed">
+                            Nabi Muhammad SAW bersama sekitar 1.400 sahabat berangkat dari Madinah untuk berumroh. Namun, kaum Quraisy menghadang di Hudaibiyah. Terjadilah Perjanjian Hudaibiyah yang menyepakati umat Islam menunda umroh hingga tahun berikutnya.
+                        </p>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-skybrand-200/70 text-xs font-semibold text-skybrand-700">
+                        Diplomasi Damai Rasulullah SAW
+                    </div>
+                </div>
+
+                <!-- Era 3 -->
+                <div class="relative bg-skybrand-50/70 p-6 rounded-2xl border border-skybrand-200 flex flex-col justify-between">
+                    <div>
+                        <span class="inline-block px-3 py-1 rounded-lg bg-skybrand-600 text-white text-xs font-bold mb-3">3. Tahun 7 Hijriah</span>
+                        <h3 class="text-lg font-bold text-slate-900 mb-2">Umratul Qadha</h3>
+                        <p class="text-sm text-slate-600 leading-relaxed">
+                            Sesuai isi Perjanjian Hudaibiyah, pada bulan Dzulqa'dah tahun 7 H, Rasulullah SAW bersama 2.000 sahabat melaksanakan umroh pengganti (<em>Umratul Qadha</em>) selama tiga hari di Makkah dengan penuh khidmat dan damai.
+                        </p>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-skybrand-200/70 text-xs font-semibold text-skybrand-700">
+                        Umroh Pertama Umat Islam Pasca Hijrah
+                    </div>
+                </div>
+
+                <!-- Era 4 -->
+                <div class="relative bg-skybrand-50/70 p-6 rounded-2xl border border-skybrand-200 flex flex-col justify-between">
+                    <div>
+                        <span class="inline-block px-3 py-1 rounded-lg bg-skybrand-600 text-white text-xs font-bold mb-3">4. Tahun 8 & 10 Hijriah</span>
+                        <h3 class="text-lg font-bold text-slate-900 mb-2">Fathu Makkah & Haji Wada</h3>
+                        <p class="text-sm text-slate-600 leading-relaxed">
+                            Setelah pembebasan Kota Makkah (<em>Fathu Makkah</em>), Rasulullah SAW membersihkan Ka'bah dari berhala dan melaksanakan umroh dari Ji'ranah (8 H), serta umroh terakhir yang dirangkai dengan Haji Wada pada tahun 10 H.
+                        </p>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-skybrand-200/70 text-xs font-semibold text-skybrand-700">
+                        Penyempurnaan Syariat Manasik
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== BAGIAN 3: ABOUT (TATA CARA, LOKASI & PETA) ==================== -->
+    <section id="about" class="scroll-mt-20 py-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-20">
+
+            <!-- Bilah Pencarian & Filter Interaktif (JavaScript) -->
+            <div class="bg-gradient-to-r from-skybrand-600 to-skybrand-500 rounded-3xl p-6 sm:p-8 text-white shadow-lg">
+                <div class="max-w-3xl mx-auto text-center space-y-4">
+                    <h2 class="text-2xl sm:text-3xl font-extrabold">Panduan Tata Cara & Lokasi Ibadah</h2>
+                    <p class="text-sky-100 text-sm sm:text-base">
+                        Gunakan fitur pencarian atau filter di bawah ini untuk menemukan urutan tata cara maupun lokasi suci dengan cepat.
+                    </p>
+                    
+                    <!-- Input Pencarian & Tombol Filter -->
+                    <div class="flex flex-col sm:flex-row gap-3 pt-2">
+                        <div class="relative flex-1">
+                            <input type="text" id="search-input" placeholder="Cari tata cara atau lokasi (misal: Tawaf, Safa, Ihram, Miqat)..." 
+                                class="w-full pl-11 pr-4 py-3.5 rounded-xl text-slate-800 bg-white placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-skybrand-300 shadow-sm text-sm sm:text-base">
+                            <svg class="w-5 h-5 text-slate-400 absolute left-3.5 top-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                        </div>
+                        <div class="flex gap-2 justify-center">
+                            <button type="button" data-filter="all" class="filter-btn px-4 py-3 rounded-xl font-bold text-sm bg-amber-400 text-slate-900 shadow transition">
+                                Semua
+                            </button>
+                            <button type="button" data-filter="tatacara" class="filter-btn px-4 py-3 rounded-xl font-semibold text-sm bg-white/20 hover:bg-white/30 text-white transition">
+                                Tata Cara
+                            </button>
+                            <button type="button" data-filter="lokasi" class="filter-btn px-4 py-3 rounded-xl font-semibold text-sm bg-white/20 hover:bg-white/30 text-white transition">
+                                Lokasi
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pesan jika pencarian tidak ditemukan -->
+            <div id="empty-search-msg" class="hidden text-center py-10 bg-white rounded-2xl border border-skybrand-200">
+                <p class="text-slate-600 font-semibold">Tidak ada informasi yang cocok dengan kata kunci pencarian Anda.</p>
+                <button id="reset-search-btn" class="mt-3 px-4 py-2 rounded-lg bg-skybrand-500 text-white text-sm font-semibold hover:bg-skybrand-600">
+                    Reset Pencarian
+                </button>
+            </div>
+
+            <!-- 3.1. Cara Melaksanakan Ibadah Umroh -->
+            <div id="section-tatacara" class="filter-section" data-category="tatacara">
+                <div class="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-2">
+                    <div>
+                        <span class="text-xs font-bold uppercase tracking-wider text-skybrand-600 bg-skybrand-100 px-3 py-1 rounded-full">Urutan Manasik</span>
+                        <h3 class="mt-2 text-2xl font-extrabold text-slate-900">Cara Melaksanakan Ibadah Umroh</h3>
+                    </div>
+                    <p class="text-sm text-slate-500">Dilakukan secara berurutan (tertib)</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="tatacara-grid">
+                    <!-- Langkah 1 -->
+                    <div class="searchable-card bg-white p-6 rounded-2xl border border-skybrand-100 shadow-sm hover:border-skybrand-400 transition flex flex-col justify-between" data-keywords="ihram niat miqat pakaian putih">
+                        <div>
+                            <div class="flex items-center justify-between mb-4">
+                                <span class="w-10 h-10 rounded-full bg-skybrand-600 text-white font-extrabold flex items-center justify-center shadow">1</span>
+                                <span class="text-xs font-bold text-skybrand-600 bg-skybrand-50 px-3 py-1 rounded-full">Rukun Pertama</span>
+                            </div>
+                            <h4 class="text-lg font-bold text-slate-900 mb-2">Ihram dan Niat Umroh</h4>
+                            <p class="text-sm text-slate-600 leading-relaxed mb-4">
+                                Mandi sunah, memakai pakaian ihram (2 helai kain putih tanpa jahitan bagi laki-laki; pakaian menutup aurat bagi perempuan), lalu berniat umroh dari <strong>Miqat</strong>.
+                            </p>
+                        </div>
+                        <div class="bg-skybrand-50 p-3.5 rounded-xl border border-skybrand-100">
+                            <p class="font-arabic text-right text-lg text-skybrand-900 leading-loose" dir="rtl">نَوَيْتُ الْعُمْرَةَ وَأَحْرَمْتُ بِهَا لِلَّهِ تَعَالَى</p>
+                            <p class="text-xs text-slate-600 mt-1 italic">"Aku berniat umroh dan berihram untuknya karena Allah Ta'ala."</p>
+                        </div>
+                    </div>
+
+                    <!-- Langkah 2 -->
+                    <div class="searchable-card bg-white p-6 rounded-2xl border border-skybrand-100 shadow-sm hover:border-skybrand-400 transition flex flex-col justify-between" data-keywords="talbiyah labbaik bacaan doa menuju makkah">
+                        <div>
+                            <div class="flex items-center justify-between mb-4">
+                                <span class="w-10 h-10 rounded-full bg-skybrand-600 text-white font-extrabold flex items-center justify-center shadow">2</span>
+                                <span class="text-xs font-bold text-amber-600 bg-amber-50 px-3 py-1 rounded-full">Sunah Utama</span>
+                            </div>
+                            <h4 class="text-lg font-bold text-slate-900 mb-2">Membaca Talbiyah</h4>
+                            <p class="text-sm text-slate-600 leading-relaxed mb-4">
+                                Sepanjang perjalanan dari Miqat menuju Masjidil Haram, jemaah memperbanyak membaca kalimat Talbiyah sebagai ungkapan memenuhi panggilan Allah SWT hingga hendak memulai tawaf.
+                            </p>
+                        </div>
+                        <div class="bg-skybrand-50 p-3.5 rounded-xl border border-skybrand-100">
+                            <p class="font-arabic text-right text-base text-skybrand-900 leading-loose" dir="rtl">لَبَّيْكَ اللَّهُمَّ لَبَّيْكَ، لَبَّيْكَ لَا شَرِيكَ لَكَ لَبَّيْكَ</p>
+                            <p class="text-xs text-slate-600 mt-1 italic">"Aku penuhi panggilan-Mu ya Allah, tiada sekutu bagi-Mu..."</p>
+                        </div>
+                    </div>
+
+                    <!-- Langkah 3 -->
+                    <div class="searchable-card bg-white p-6 rounded-2xl border border-skybrand-100 shadow-sm hover:border-skybrand-400 transition flex flex-col justify-between" data-keywords="tawaf kabah 7 putaran hajar aswad mengelilingi">
+                        <div>
+                            <div class="flex items-center justify-between mb-4">
+                                <span class="w-10 h-10 rounded-full bg-skybrand-600 text-white font-extrabold flex items-center justify-center shadow">3</span>
+                                <span class="text-xs font-bold text-skybrand-600 bg-skybrand-50 px-3 py-1 rounded-full">Rukun Kedua</span>
+                            </div>
+                            <h4 class="text-lg font-bold text-slate-900 mb-2">Melaksanakan Tawaf</h4>
+                            <p class="text-sm text-slate-600 leading-relaxed mb-4">
+                                Mengelilingi Ka'bah sebanyak <strong>7 kali putaran</strong> berlawanan arah jarum jam (posisi Ka'bah di sebelah kiri), dimulai dan diakhiri sejajar dengan sudut <strong>Hajar Aswad</strong> sambil berzikir dan berdoa.
+                            </p>
+                        </div>
+                        <div class="bg-skybrand-50 p-3 rounded-xl border border-skybrand-100 text-xs text-skybrand-800 font-medium">
+                            💡 Syarat: Suci dari hadas kecil & besar serta menutup aurat.
+                        </div>
+                    </div>
+
+                    <!-- Langkah 4 -->
+                    <div class="searchable-card bg-white p-6 rounded-2xl border border-skybrand-100 shadow-sm hover:border-skybrand-400 transition flex flex-col justify-between" data-keywords="salat sunah tawaf maqam ibrahim 2 rakaat">
+                        <div>
+                            <div class="flex items-center justify-between mb-4">
+                                <span class="w-10 h-10 rounded-full bg-skybrand-600 text-white font-extrabold flex items-center justify-center shadow">4</span>
+                                <span class="text-xs font-bold text-amber-600 bg-amber-50 px-3 py-1 rounded-full">Sunah Tawaf</span>
+                            </div>
+                            <h4 class="text-lg font-bold text-slate-900 mb-2">Salat Sunah Tawaf</h4>
+                            <p class="text-sm text-slate-600 leading-relaxed mb-4">
+                                Setelah menyelesaikan 7 putaran tawaf, jemaah melaksanakan salat sunah 2 rakaat di belakang <strong>Maqam Ibrahim</strong> (atau di area Masjidil Haram mana saja jika penuh), kemudian meminum air Zamzam.
+                            </p>
+                        </div>
+                        <div class="bg-skybrand-50 p-3 rounded-xl border border-skybrand-100 text-xs text-skybrand-800 font-medium">
+                            📖 Dianjurkan membaca Surah Al-Kafirun (rakaat 1) & Al-Ikhlas (rakaat 2).
+                        </div>
+                    </div>
+
+                    <!-- Langkah 5 -->
+                    <div class="searchable-card bg-white p-6 rounded-2xl border border-skybrand-100 shadow-sm hover:border-skybrand-400 transition flex flex-col justify-between" data-keywords="sai safa marwah berlari kecil berjalan 7 kali">
+                        <div>
+                            <div class="flex items-center justify-between mb-4">
+                                <span class="w-10 h-10 rounded-full bg-skybrand-600 text-white font-extrabold flex items-center justify-center shadow">5</span>
+                                <span class="text-xs font-bold text-skybrand-600 bg-skybrand-50 px-3 py-1 rounded-full">Rukun Ketiga</span>
+                            </div>
+                            <h4 class="text-lg font-bold text-slate-900 mb-2">Melaksanakan Sa'i</h4>
+                            <p class="text-sm text-slate-600 leading-relaxed mb-4">
+                                Berjalan kaki (dan berlari kecil di area lampu hijau bagi laki-laki) sebanyak <strong>7 kali perjalanan</strong> antara <strong>Bukit Safa dan Bukit Marwah</strong>. Dimulai dari Bukit Safa dan berakhir di Bukit Marwah.
+                            </p>
+                        </div>
+                        <div class="bg-skybrand-50 p-3 rounded-xl border border-skybrand-100 text-xs text-skybrand-800 font-medium">
+                            ℹ️ Safa ke Marwah dihitung 1x, Marwah ke Safa dihitung 1x.
+                        </div>
+                    </div>
+
+                    <!-- Langkah 6 -->
+                    <div class="searchable-card bg-white p-6 rounded-2xl border border-skybrand-100 shadow-sm hover:border-skybrand-400 transition flex flex-col justify-between" data-keywords="tahallul mencukur memotong rambut selesai">
+                        <div>
+                            <div class="flex items-center justify-between mb-4">
+                                <span class="w-10 h-10 rounded-full bg-skybrand-600 text-white font-extrabold flex items-center justify-center shadow">6</span>
+                                <span class="text-xs font-bold text-skybrand-600 bg-skybrand-50 px-3 py-1 rounded-full">Rukun Keempat</span>
+                            </div>
+                            <h4 class="text-lg font-bold text-slate-900 mb-2">Melaksanakan Tahallul</h4>
+                            <p class="text-sm text-slate-600 leading-relaxed mb-4">
+                                Mencukur gundul atau memotong sebagian rambut kepala (minimal 3 helai rambut bagi perempuan). Dengan tahallul, rangkaian ibadah umroh selesai dan larangan ihram kembali halal.
+                            </p>
+                        </div>
+                        <div class="bg-emerald-50 p-3 rounded-xl border border-emerald-200 text-xs text-emerald-800 font-semibold">
+                            ✅ Alhamdulillah, rangkaian ibadah umroh telah sempurna!
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3.2. Lokasi Ibadah Umroh -->
+            <div id="section-lokasi" class="filter-section" data-category="lokasi">
+                <div class="mb-8">
+                    <span class="text-xs font-bold uppercase tracking-wider text-skybrand-600 bg-skybrand-100 px-3 py-1 rounded-full">Tempat Bersejarah</span>
+                    <h3 class="mt-2 text-2xl font-extrabold text-slate-900">Lokasi-Lokasi Penting Ibadah Umroh</h3>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Lokasi 1: Masjidil Haram -->
+                    <div class="searchable-card bg-white rounded-2xl overflow-hidden border border-skybrand-100 shadow-sm hover:shadow-md transition" data-keywords="masjidil haram makkah masjid suci">
+                        <div class="h-36 bg-gradient-to-r from-skybrand-500 to-skybrand-700 p-6 flex items-end relative overflow-hidden">
+                            <span class="text-5xl absolute right-4 top-4 opacity-25">🕌</span>
+                            <h4 class="text-xl font-extrabold text-white relative z-10">Masjidil Haram</h4>
+                        </div>
+                        <div class="p-6">
+                            <p class="text-sm text-slate-600 leading-relaxed mb-4">
+                                Masjid paling suci umat Islam yang terletak di pusat Kota Makkah, Arab Saudi. Di dalamnya terdapat Ka'bah, Maqam Ibrahim, Sumur Zamzam, serta lintasan Safa dan Marwah.
+                            </p>
+                            <button type="button" onclick="focusLocation('masjidil_haram')" class="text-xs font-bold text-skybrand-600 hover:text-skybrand-800 flex items-center gap-1">
+                                📍 Tampilkan di Peta Makkah →
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Lokasi 2: Ka'bah & Hajar Aswad -->
+                    <div class="searchable-card bg-white rounded-2xl overflow-hidden border border-skybrand-100 shadow-sm hover:shadow-md transition" data-keywords="kabah baitullah hajar aswad kiblat tawaf">
+                        <div class="h-36 bg-gradient-to-r from-slate-800 to-skybrand-900 p-6 flex items-end relative overflow-hidden">
+                            <span class="text-5xl absolute right-4 top-4 opacity-30">🕋</span>
+                            <h4 class="text-xl font-extrabold text-white relative z-10">Ka'bah & Hajar Aswad</h4>
+                        </div>
+                        <div class="p-6">
+                            <p class="text-sm text-slate-600 leading-relaxed mb-4">
+                                Bangunan berbentuk kubus di tengah Masjidil Haram yang menjadi kiblat salat umat Islam seluruh dunia serta pusat putaran ibadah tawaf yang dimulai dari sudut Hajar Aswad.
+                            </p>
+                            <button type="button" onclick="focusLocation('kabah')" class="text-xs font-bold text-skybrand-600 hover:text-skybrand-800 flex items-center gap-1">
+                                📍 Tampilkan di Peta Makkah →
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Lokasi 3: Bukit Safa -->
+                    <div class="searchable-card bg-white rounded-2xl overflow-hidden border border-skybrand-100 shadow-sm hover:shadow-md transition" data-keywords="bukit safa sai awal titik mulai">
+                        <div class="h-36 bg-gradient-to-r from-skybrand-400 to-cyan-600 p-6 flex items-end relative overflow-hidden">
+                            <span class="text-5xl absolute right-4 top-4 opacity-30">⛰️</span>
+                            <h4 class="text-xl font-extrabold text-white relative z-10">Bukit Safa</h4>
+                        </div>
+                        <div class="p-6">
+                            <p class="text-sm text-slate-600 leading-relaxed mb-4">
+                                Bukit batu kecil di dalam kompleks Masjidil Haram yang menjadi titik awal dimulainya ibadah Sa'i. Di tempat ini jemaah menghadap Ka'bah sambil berdoa sebelum berjalan ke Marwah.
+                            </p>
+                            <button type="button" onclick="focusLocation('safa')" class="text-xs font-bold text-skybrand-600 hover:text-skybrand-800 flex items-center gap-1">
+                                📍 Tampilkan di Peta Makkah →
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Lokasi 4: Bukit Marwah -->
+                    <div class="searchable-card bg-white rounded-2xl overflow-hidden border border-skybrand-100 shadow-sm hover:shadow-md transition" data-keywords="bukit marwah sai titik akhir putaran ketujuh">
+                        <div class="h-36 bg-gradient-to-r from-blue-500 to-skybrand-600 p-6 flex items-end relative overflow-hidden">
+                            <span class="text-5xl absolute right-4 top-4 opacity-30">🏔️</span>
+                            <h4 class="text-xl font-extrabold text-white relative z-10">Bukit Marwah</h4>
+                        </div>
+                        <div class="p-6">
+                            <p class="text-sm text-slate-600 leading-relaxed mb-4">
+                                Bukit yang berjarak sekitar 450 meter di sebelah utara Bukit Safa. Bukit Marwah merupakan titik akhir perjalanan ke-7 ibadah Sa'i sekaligus tempat pelaksanaan Tahallul.
+                            </p>
+                            <button type="button" onclick="focusLocation('marwah')" class="text-xs font-bold text-skybrand-600 hover:text-skybrand-800 flex items-center gap-1">
+                                📍 Tampilkan di Peta Makkah →
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Lokasi 5: Maqam Ibrahim & Hijr Ismail -->
+                    <div class="searchable-card bg-white rounded-2xl overflow-hidden border border-skybrand-100 shadow-sm hover:shadow-md transition" data-keywords="maqam ibrahim hijr ismail salat sunah tawaf">
+                        <div class="h-36 bg-gradient-to-r from-amber-500 to-skybrand-600 p-6 flex items-end relative overflow-hidden">
+                            <span class="text-5xl absolute right-4 top-4 opacity-30">✨</span>
+                            <h4 class="text-xl font-extrabold text-white relative z-10">Maqam Ibrahim & Hijr Ismail</h4>
+                        </div>
+                        <div class="p-6">
+                            <p class="text-sm text-slate-600 leading-relaxed mb-4">
+                                <strong>Maqam Ibrahim</strong> adalah batu pijakan Nabi Ibrahim AS saat membangun Ka'bah. Di dekatnya terdapat <strong>Hijr Ismail</strong>, area setengah lingkaran yang termasuk bagian dari Ka'bah.
+                            </p>
+                            <button type="button" onclick="focusLocation('kabah')" class="text-xs font-bold text-skybrand-600 hover:text-skybrand-800 flex items-center gap-1">
+                                📍 Lihat Area Pelataran Ka'bah →
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Lokasi 6: Miqat Makani -->
+                    <div class="searchable-card bg-white rounded-2xl overflow-hidden border border-skybrand-100 shadow-sm hover:shadow-md transition" data-keywords="miqat bir ali dzulhulaifah yalamlam qarnul manazil ihram">
+                        <div class="h-36 bg-gradient-to-r from-teal-500 to-skybrand-600 p-6 flex items-end relative overflow-hidden">
+                            <span class="text-5xl absolute right-4 top-4 opacity-30">🧭</span>
+                            <h4 class="text-xl font-extrabold text-white relative z-10">Tempat Miqat (Batas Ihram)</h4>
+                        </div>
+                        <div class="p-6">
+                            <p class="text-sm text-slate-600 leading-relaxed mb-4">
+                                Batas geografis tempat jemaah mulai mengenakan pakaian ihram dan berniat umroh, seperti <strong>Bir Ali (Dzulhulaifah)</strong> bagi jemaah dari arah Madinah, serta <strong>Yalamlam</strong> atau <strong>Qarnul Manazil</strong>.
+                            </p>
+                            <span class="text-xs font-semibold text-slate-500">Batas Awal Niat Umroh</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3.3. Peta Lokasi Ibadah Interaktif -->
+            <div id="peta-lokasi" class="scroll-mt-24 bg-white rounded-3xl border border-skybrand-200 shadow-md overflow-hidden">
+                <div class="p-6 sm:p-8 bg-skybrand-50 border-b border-skybrand-100">
+                    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                        <div>
+                            <span class="text-xs font-bold uppercase tracking-wider text-skybrand-700 bg-skybrand-200/70 px-3 py-1 rounded-full">Peta Interaktif Kota Makkah</span>
+                            <h3 class="mt-2 text-2xl font-extrabold text-slate-900">Peta Lokasi Ibadah Umroh</h3>
+                            <p class="text-sm text-slate-600 mt-1">Klik tombol lokasi di bawah atau klik penanda (pin) pada peta untuk melihat detail setiap titik ibadah.</p>
+                        </div>
+
+                        <!-- Tombol Pintasan Fokus Peta -->
+                        <div class="flex flex-wrap gap-2">
+                            <button type="button" onclick="focusLocation('masjidil_haram')" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold bg-skybrand-600 text-white hover:bg-skybrand-700 shadow-sm transition">
+                                🕌 Masjidil Haram
+                            </button>
+                            <button type="button" onclick="focusLocation('kabah')" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold bg-white text-skybrand-700 border border-skybrand-300 hover:bg-skybrand-100 transition">
+                                🕋 Ka'bah
+                            </button>
+                            <button type="button" onclick="focusLocation('safa')" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold bg-white text-skybrand-700 border border-skybrand-300 hover:bg-skybrand-100 transition">
+                                ⛰️ Bukit Safa
+                            </button>
+                            <button type="button" onclick="focusLocation('marwah')" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold bg-white text-skybrand-700 border border-skybrand-300 hover:bg-skybrand-100 transition">
+                                🏔️ Bukit Marwah
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Kontainer Peta Leaflet -->
+                <div id="umroh-map" class="w-full h-[380px] sm:h-[460px]"></div>
+
+                <!-- Keterangan Peta -->
+                <div class="px-6 py-4 bg-white border-t border-skybrand-100 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                    <span>📍 Koordinat Pusat: Masjidil Haram, Makkah Al-Mukarramah (21.4225° N, 39.8262° E)</span>
+                    <span class="font-semibold text-skybrand-600">Gunakan gestur cubit/scroll untuk memperbesar peta</span>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ==================== FOOTER ==================== -->
+    <footer class="bg-skybrand-900 text-sky-100 py-10 mt-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-center sm:text-left">
+            <div>
+                <h4 class="text-lg font-bold text-white">Panduan Ibadah Umroh</h4>
+                <p class="text-xs text-sky-300 mt-1">Media Pembelajaran Web Interaktif Berbasis HTML, CSS, & JavaScript.</p>
+            </div>
+            <div class="flex gap-6 text-sm font-medium">
+                <a href="#home" class="hover:text-white transition">Home</a>
+                <a href="#history" class="hover:text-white transition">History</a>
+                <a href="#about" class="hover:text-white transition">About</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ==================== JAVASCRIPT INTERAKTIF ==================== -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // 1. MENU MOBILE HAMBURGER TOGGLE
+            const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+            const mobileMenu = document.getElementById('mobile-menu');
+            const iconOpen = document.getElementById('icon-open');
+            const iconClose = document.getElementById('icon-close');
+
+            mobileMenuBtn.addEventListener('click', () => {
+                const isHidden = mobileMenu.classList.contains('hidden');
+                mobileMenu.classList.toggle('hidden');
+                iconOpen.classList.toggle('hidden', !isHidden);
+                iconClose.classList.toggle('hidden', isHidden);
+                mobileMenuBtn.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+            });
+
+            // Tutup menu mobile otomatis saat tautan diklik
+            document.querySelectorAll('.mobile-nav-link').forEach(link => {
+                link.addEventListener('click', () => {
+                    mobileMenu.classList.add('hidden');
+                    iconOpen.classList.remove('hidden');
+                    iconClose.classList.add('hidden');
+                    mobileMenuBtn.setAttribute('aria-expanded', 'false');
+                });
+            });
+
+            // 2. HIGHLIGHT MENU NAVIGASI AKTIF SAAT SCROLL / KLIK
+            const navLinks = document.querySelectorAll('.nav-link');
+            const sections = ['home', 'history', 'about'].map(id => document.getElementById(id));
+
+            function setActiveNav(targetId) {
+                navLinks.forEach(link => {
+                    if (link.dataset.nav === targetId) {
+                        link.classList.add('bg-skybrand-500', 'text-white', 'shadow-sm', 'font-bold');
+                        link.classList.remove('text-slate-600', 'hover:bg-skybrand-100', 'font-semibold');
+                    } else {
+                        link.classList.remove('bg-skybrand-500', 'text-white', 'shadow-sm', 'font-bold');
+                        link.classList.add('text-slate-600', 'hover:bg-skybrand-100', 'font-semibold');
+                    }
+                });
+            }
+
+            window.addEventListener('scroll', () => {
+                let current = 'home';
+                const scrollPosition = window.scrollY + 180;
+                sections.forEach(section => {
+                    if (section && scrollPosition >= section.offsetTop) {
+                        current = section.id;
+                    }
+                });
+                setActiveNav(current);
+            });
+
+            // 3. FITUR PENCARIAN & FILTER TATA CARA / LOKASI
+            const searchInput = document.getElementById('search-input');
+            const filterBtns = document.querySelectorAll('.filter-btn');
+            const filterSections = document.querySelectorAll('.filter-section');
+            const searchableCards = document.querySelectorAll('.searchable-card');
+            const emptySearchMsg = document.getElementById('empty-search-msg');
+            const resetSearchBtn = document.getElementById('reset-search-btn');
+
+            let activeFilter = 'all';
+
+            function applySearchAndFilter() {
+                const query = searchInput.value.toLowerCase().trim();
+                let visibleCardCount = 0;
+
+                // Filter berdasarkan kategori (Semua / Tata Cara / Lokasi)
+                filterSections.forEach(sec => {
+                    const cat = sec.dataset.category;
+                    if (activeFilter === 'all' || activeFilter === cat) {
+                        sec.classList.remove('hidden');
+                    } else {
+                        sec.classList.add('hidden');
+                    }
+                });
+
+                // Filter berdasarkan kata kunci pencarian
+                searchableCards.forEach(card => {
+                    const parentSection = card.closest('.filter-section');
+                    const isSectionVisible = !parentSection.classList.contains('hidden');
+                    const textContent = card.innerText.toLowerCase();
+                    const keywords = (card.dataset.keywords || '').toLowerCase();
+                    const isMatch = textContent.includes(query) || keywords.includes(query);
+
+                    if (isSectionVisible && isMatch) {
+                        card.classList.remove('hidden');
+                        visibleCardCount++;
+                    } else {
+                        card.classList.add('hidden');
+                    }
+                });
+
+                // Tampilkan pesan kosong jika tidak ada kartu yang cocok
+                if (visibleCardCount === 0) {
+                    emptySearchMsg.classList.remove('hidden');
+                } else {
+                    emptySearchMsg.classList.add('hidden');
+                }
+            }
+
+            searchInput.addEventListener('input', applySearchAndFilter);
+
+            filterBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    activeFilter = btn.dataset.filter;
+                    filterBtns.forEach(b => {
+                        b.classList.remove('bg-amber-400', 'text-slate-900', 'font-bold', 'shadow');
+                        b.classList.add('bg-white/20', 'text-white', 'font-semibold');
+                    });
+                    btn.classList.remove('bg-white/20', 'text-white', 'font-semibold');
+                    btn.classList.add('bg-amber-400', 'text-slate-900', 'font-bold', 'shadow');
+                    applySearchAndFilter();
+                });
+            });
+
+            resetSearchBtn.addEventListener('click', () => {
+                searchInput.value = '';
+                activeFilter = 'all';
+                filterBtns[0].click();
+            });
+
+            // 4. INISIALISASI PETA INTERAKTIF MAKKAH (LEAFLET.JS)
+            const locationsData = {
+                masjidil_haram: {
+                    coords: [21.4229, 39.8257],
+                    zoom: 17,
+                    title: '🕌 Masjidil Haram',
+                    desc: 'Masjid suci utama di Kota Makkah tempat pelaksanaan ibadah Tawaf dan Sa\'i.'
+                },
+                kabah: {
+                    coords: [21.42251, 39.82621],
+                    zoom: 18,
+                    title: '🕋 Ka\'bah & Hajar Aswad',
+                    desc: 'Pusat kiblat umat Islam dan titik pusat pelaksanaan Tawaf 7 putaran.'
+                },
+                safa: {
+                    coords: [21.42162, 39.82732],
+                    zoom: 18,
+                    title: '⛰️ Bukit Safa',
+                    desc: 'Titik awal dimulainya perjalanan ibadah Sa\'i menuju Bukit Marwah.'
+                },
+                marwah: {
+                    coords: [21.42505, 39.82725],
+                    zoom: 18,
+                    title: '🏔️ Bukit Marwah',
+                    desc: 'Titik akhir putaran ke-7 ibadah Sa\'i dan lokasi pelaksanaan Tahallul.'
+                }
+            };
+
+            // Inisialisasi peta berpusat di Masjidil Haram, Makkah
+            const map = L.map('umroh-map', {
+                scrollWheelZoom: false
+            }).setView(locationsData.masjidil_haram.coords, 17);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+
+            // Simpan marker agar dapat dibuka secara programatik
+            const markers = {};
+
+            Object.keys(locationsData).forEach(key => {
+                const loc = locationsData[key];
+                const marker = L.marker(loc.coords).addTo(map);
+                marker.bindPopup(`
+                    <div style="font-family: 'Plus Jakarta Sans', sans-serif; min-width: 180px;">
+                        <strong style="color: #0284c7; font-size: 14px;">${loc.title}</strong>
+                        <p style="margin: 4px 0 0; font-size: 12px; color: #334155; line-height: 1.4;">${loc.desc}</p>
+                    </div>
+                `);
+                markers[key] = marker;
+            });
+
+            // Buka popup Ka'bah secara default saat halaman dimuat
+            markers.kabah.openPopup();
+
+            // Fungsi global untuk memfokuskan peta dari tombol pintasan atau kartu lokasi
+            window.focusLocation = function(locationKey) {
+                const target = locationsData[locationKey];
+                if (!target) return;
+
+                // Gulir halus ke bagian peta
+                document.getElementById('peta-lokasi').scrollIntoView({ behavior: 'smooth' });
+
+                setTimeout(() => {
+                    map.invalidateSize();
+                    map.flyTo(target.coords, target.zoom, { duration: 1.2 });
+                    markers[locationKey].openPopup();
+                }, 400);
+            };
+        });
+    </script>
+</body>
+</html>
